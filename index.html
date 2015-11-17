@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Irish Trains</title>
+        <style>
+            .irGreen    {
+                background-color: #5da033;   
+            }
+            
+            .irOrange   {
+                background-color:  #f6891f;   
+            }
+            table, tr, td,th
+            {
+                border: 1px solid black; 
+            }
+            table
+            {
+                border-collapse: collapse;
+                width: 100%;
+            }
+            th
+            {
+                background-color: #ccc;   
+                font-size: .85em;
+            }
+            
+            td
+            {   font-size: .8em;
+            
+            }
+            
+            #map 
+            { 
+                height: 300px; 
+                margin-bottom: 10px;
+                display: none;
+            }
+        
+            
+            #schedule button
+            {
+                width: 100%;   
+                font-weight: bold;
+                font-size: 1.5em;
+                height: 35px;
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }
+            header
+            {
+                width: 100%;
+            }
+            
+            
+            .logo
+            {
+                width: 35%;   
+            }
+            
+            .banner
+            {
+                width: 100%;   
+            }
+        </style>
+        <script src='https://api.mapbox.com/mapbox.js/v2.2.3/mapbox.js'></script>
+        <link href='https://api.mapbox.com/mapbox.js/v2.2.3/mapbox.css' rel='stylesheet' />
+        
+        <script>
+            var xmlhttp;
+            var map;
+            
+            window.onload=function()
+            {
+                document.getElementById('btnGetTrains').addEventListener('click', getTrainInfo, false);
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.onreadystatechange = receiveInfo;
+               
+               
+            }
+            
+            function getTrainInfo()
+            {
+                xmlhttp.open('GET', 'http://api.irishrail.ie/realtime/realtime.asmx/getCurrentTrainsXML', true);
+                xmlhttp.send();   
+            }
+            
+            function receiveInfo()
+            { 
+                    if(xmlhttp.readyState==4 && xmlhttp.status == 200){
+                        
+                        //Create the Map
+                        document.getElementById('map').style.display = "block";
+                         // Provide your access token
+                        L.mapbox.accessToken = 'pk.eyJ1IjoibWxhc29mZiIsImEiOiJTRWhqUE5FIn0.912gt8yGRiVchFqlbbAEFg';
+                        // Create a map in the div #map
+                        map=L.mapbox.map('map', 'mlasoff.o6cb77m0');
+                        
+                        
+                        //Deal with the data
+                        var theXML = xmlhttp.responseXML.documentElement;
+                        var trains = theXML.getElementsByTagName('objTrainPositions');
+                        var out="<table>";
+                        out += "<tr><th>Train #</th><th>Direction</th><th>Message</th></tr>";
+                        for (i = 0; i < trains.length; i++)
+                            {
+                                var trainCode = trains[i].getElementsByTagName('TrainCode')[0].firstChild.nodeValue;
+                                var direction = trains[i].getElementsByTagName('Direction')[0].firstChild.nodeValue;
+                                var message = trains[i].getElementsByTagName('PublicMessage')[0].firstChild.nodeValue;
+                                var latitude = trains[i].getElementsByTagName('TrainLatitude')[0].firstChild.nodeValue;
+                                var longitude = trains[i].getElementsByTagName('TrainLongitude')[0].firstChild.nodeValue;
+                                var trainStatus = trains[i].getElementsByTagName('TrainStatus')[0].firstChild.nodeValue;
+                                displayTrain(latitude,longitude, trainCode, trainStatus, direction);                                                     
+                                if(i%2==0)
+                                {
+                                    out += "<tr class='irGreen'><td>" + trainCode + "</td><td>" + direction + "</td><td>" + breakReplace(message) + "</td></tr>";
+                                } else
+                                {
+                                    out += "<tr class='irOrange'><td>" + trainCode + "</td><td>" + direction + "</td><td>" + breakReplace(message) + "</td></tr>";   
+                                }
+                            }
+                        out += "</table>"
+                        document.getElementById('result').innerHTML = out;
+                    }
+            }
+            
+            function breakReplace(messageText)
+            {
+                messageText = messageText.replace(/\\n/g,"<br/>");
+                return messageText;
+            }
+            
+            function displayTrain(latitude,longitude, trainCode, trainStatus, direction)  
+            {
+                var statusOut;
+                if (trainStatus == "n")
+                {
+                    statusOut = "Pending";
+                } else
+                {
+                    statusOut = "Running";   
+                }
+                
+                var message = "<p>Train: " + trainCode + "<br/>" + statusOut + "<br/>Direction: " + direction;
+                
+                L.marker([latitude, longitude], {
+                icon: L.mapbox.marker.icon({
+                'marker-size': 'large',
+                'marker-symbol': 'rail',
+                'marker-color': '#fa0'
+                    })
+                }).bindPopup(message)
+                .addTo(map);
+                
+            }
+        </script>
+    </head>
+    <body>
+        <div id="container">
+            <header>
+                <img class="logo" src="http://www.sailing.ie/Portals/0/Iarnrod%20Eireann.jpg" alt="Irish Rail" /><br/>
+                <img class="banner" src="https://over-c.com/wp-content/uploads/2013/07/Rail.jpg" alt="Irish Rail Train"/><br/>
+            </header>
+            <div id="schedule">
+                <button id="btnGetTrains">Get Train Status</button>
+                <div id="mapSide">
+                    <div id="map"></div>
+                </div>
+                <div id="result"></div>
+                
+            </div> 
+        </div>
+    </body>
+</html>
